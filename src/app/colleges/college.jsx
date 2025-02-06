@@ -180,30 +180,30 @@ function Colleges() {
       </div>
 
       {/* buttons */}
-
       <div className="flex flex-col items-center">
-  <div className="mt-5 mb-5 mx-auto btn-container md:flex justify-center gap-x-4 gap-y-2 grid grid-cols-3">
-    {Options.map((option, index) => (
-      <button
+      <div className="mt-5 mb-5 mx-auto btn-container grid grid-cols-3 gap-2 px-2 md:flex md:justify-center md:gap-x-4 md:gap-y-2">
+  {Options.map((option, index) => (
+    <button
         key={option.course || index}  // Ensuring unique key
-        className={`h-12 w-32 border border-black-100 rounded-md hover:drop-shadow-lg ${
-          selectedCourse === option.course ? 'bg-orange-600' : 'bg-[#1976D2]'
-        }`}
-        onClick={() => {
-          if (option.text === "B. Sc" || option.text === "BE/B. Tech") {
-            openModal(option.text === "B. Sc" ? "BSc" : "BE/B. Tech");
-          } else {
-            handleCourseChange({ name: option.course });
-          }
-        }}
-      >
-        <p className="flex justify-center items-center gap-x-2 hover:underline text-white font-medium">
-          {option.text}
-        </p>
-      </button>
-    ))}
-  </div>
+      className={`h-12 w-32 border border-black-100 rounded-md hover:drop-shadow-lg ${
+        selectedCourse === option.course ? 'bg-orange-600' : 'bg-[#1976D2]'
+      }`}
+      onClick={() => {
+        if (option.text === "B. Sc" || option.text === "BE/B. Tech") {
+          openModal(option.text === "B. Sc" ? "BSc" : "BE/B. Tech");
+        } else {
+          handleCourseChange({ name: option.course });
+        }
+      }}
+    >
+      <p className="flex justify-center items-center gap-x-2 hover:underline text-white font-medium">
+        {option.text}
+      </p>
+    </button>
+  ))}
 </div>
+
+      </div>
 
       <h1 className="text-xl font-bold text-black flex justify-center font-mono">
         {selectedCourse ? (

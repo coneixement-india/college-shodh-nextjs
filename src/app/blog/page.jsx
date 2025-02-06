@@ -1,45 +1,98 @@
+"use client";
 import { client } from "@/sanity/client";
 import imageUrlBuilder from "@sanity/image-url";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
-const POSTS_QUERY = `*[_type == "post" && defined(publishedAt)] | order(publishedAt desc) {
-  _id,
-  title,
-  slug,
-  publishedAt,
-  mainImage {
-    asset -> {
-      _id,
-      url
-    },
-    alt
-  }
-}`;
+const POSTS_PER_PAGE = 6;
+
 const builder = imageUrlBuilder(client);
-
 function urlFor(source) {
   return builder.image(source);
 }
 
-export const revalidate = 30;
+const fetchPosts = async (page) => {
+  const start = (page - 1) * POSTS_PER_PAGE;
+  const end = start + POSTS_PER_PAGE;
+  const query = `*[_type == "post" && defined(publishedAt)] | order(publishedAt desc) [${start}...${end}] {
+    _id,
+    title,
+    slug,
+    publishedAt,
+    mainImage {
+      asset -> {
+        _id,
+        url
+      },
+      alt
+    }
+  }`;
+  return client.fetch(query);
+};
 
-export default async function BlogListPage() {
-  const posts = await client.fetch(POSTS_QUERY);
+export default function BlogListPage() {
+  const [posts, setPosts] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPosts, setTotalPosts] = useState(0);
+
+  useEffect(() => {
+    fetchPosts(page).then((newPosts) => {
+      setPosts(newPosts);
+    });
+
+    // Fetch total post count
+    client.fetch(`count(*[_type == "post" && defined(publishedAt)])`).then(setTotalPosts);
+  }, [page]);
+
+  const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE);
 
   return (
-    <main className="container mx-auto  p-10">
-    <h1 className="text-3xl font-extrabold mb-12">Blog Posts</h1>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      {posts.length > 0 ? (
-        posts.map((post) => (
-          <PostCard key={post._id} post={post} />
-        ))
-      ) : (
-        <p>No blog posts found.</p>
+    <main className="container mx-auto p-10">
+      <h1 className="text-3xl font-extrabold mb-12">Blog Posts</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {posts.length > 0 ? (
+          posts.map((post) => <PostCard key={post._id} post={post} />)
+        ) : (
+          <p>No blog posts found.</p>
+        )}
+      </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center mt-8 space-x-2">
+          {/* Previous Arrow */}
+          <button
+            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+            disabled={page === 1}
+            className="px-3 py-2 rounded-md bg-gray-300 disabled:opacity-50"
+          >
+            ←
+          </button>
+
+          {/* Page Numbers */}
+          {[...Array(totalPages)].map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i + 1)}
+              className={`px-4 py-2 rounded-md ${
+                page === i + 1 ? "bg-blue-500 text-white" : "bg-gray-200"
+              }`}
+            >
+              {i + 1}
+            </button>
+          ))}
+
+          {/* Next Arrow */}
+          <button
+            onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={page === totalPages}
+            className="px-3 py-2 rounded-md bg-gray-300 disabled:opacity-50"
+          >
+            →
+          </button>
+        </div>
       )}
-    </div>
-  </main>
-  
+    </main>
   );
 }
 
@@ -67,157 +120,3 @@ const PostCard = ({ post }) => {
     </div>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { client } from "@/sanity/client";
-// import imageUrlBuilder from "@sanity/image-url";
-// import Link from "next/link";
-
-// const POSTS_QUERY = `*[_type == "post" && defined(publishedAt)] | order(publishedAt desc) {
-//   _id,
-//   title,
-//   slug,
-//   publishedAt,
-//   mainImage {
-//     asset -> {
-//       _id,
-//       url
-//     },
-//     alt
-//   }
-// }`;
-
-// const builder = imageUrlBuilder(client);
-
-// function urlFor(source) {
-//   return builder.image(source);
-// }
-
-// export const revalidate = 30;
-
-// export default async function BlogListPage() {
-//   const posts = await client.fetch(POSTS_QUERY);
-
-//   if (!posts.length) {
-//     return (
-//       <main className="container mx-auto px-6 py-12">
-//         <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
-//           Blog Posts
-//         </h1>
-//         <p className="text-center text-lg text-gray-600">
-//           No blog posts found.
-//         </p>
-//       </main>
-//     );
-//   }
-
-//   const [featuredPost, ...regularPosts] = posts;
-
-//   return (
-//     <main className="container mx-auto px-6 py-12">
-//       <h1 className="text-5xl font-extrabold mb-12 text-center text-gray-900">
-//         Latest Insights & Stories
-//       </h1>
-
-//       {/* Featured Post Section */}
-//       <section className="mb-12">
-//         <FeaturedPost post={featuredPost} />
-//       </section>
-
-//       {/* Complex Grid for Regular Posts */}
-//       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-//         {regularPosts.map((post) => (
-//           <PostCard key={post._id} post={post} />
-//         ))}
-//       </section>
-//     </main>
-//   );
-// }
-
-// // Featured Post Component
-// const FeaturedPost = ({ post }) => {
-//   const postImageUrl = post.mainImage?.asset
-//     ? urlFor(post.mainImage).width(1200).height(600).url()
-//     : "/placeholder.jpg";
-
-//   return (
-//     <Link href={`/blog/${post.slug.current}`}>
-//       <div className="relative rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 group">
-//         <img
-//           src={postImageUrl}
-//           alt={post.mainImage?.alt || post.title}
-//           className="w-full h-96 object-cover group-hover:scale-105 transition-transform duration-300"
-//         />
-//         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-75"></div>
-//         <div className="absolute bottom-6 left-6 text-white">
-//           <h2 className="text-4xl font-bold">{post.title}</h2>
-//           <p className="text-sm mt-2">
-//             {new Date(post.publishedAt).toLocaleDateString(undefined, {
-//               year: "numeric",
-//               month: "long",
-//               day: "numeric",
-//             })}
-//           </p>
-//         </div>
-//       </div>
-//     </Link>
-//   );
-// };
-
-// // Regular Post Card Component
-// const PostCard = ({ post }) => {
-//   const postImageUrl = post.mainImage?.asset
-//     ? urlFor(post.mainImage).width(800).height(450).url()
-//     : "/placeholder.jpg";
-
-//   return (
-//     <Link href={`/blog/${post.slug.current}`}>
-//       <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 group">
-//         <div className="relative">
-//           <img
-//             src={postImageUrl}
-//             alt={post.mainImage?.alt || post.title}
-//             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-//           />
-//         </div>
-//         <div className="p-5">
-//           <h3 className="text-lg font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors duration-300">
-//             {post.title}
-//           </h3>
-//           <p className="text-sm text-gray-500 mt-2">
-//             {new Date(post.publishedAt).toLocaleDateString(undefined, {
-//               year: "numeric",
-//               month: "long",
-//               day: "numeric",
-//             })}
-//           </p>
-//         </div>
-//       </div>
-//     </Link>
-//   );
-// };
